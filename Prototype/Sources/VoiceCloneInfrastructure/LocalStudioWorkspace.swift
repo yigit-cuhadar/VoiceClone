@@ -2,20 +2,59 @@ import AudioCommon
 import Foundation
 import VoiceCloneCore
 
-public struct LocalStudioWorkspace: StudioWorkspaceStore {
+public struct LocalStudioWorkspace: SynchronizingWorkspaceStore {
     private let root: URL
     private let media: URL
     private let manifest: URL
+    private let synchronizationFile: URL
 
-    public init(root: URL) {
+    public init(root: URL, synchronizationNamespace: String? = nil) {
         self.root = root
         media = root.appendingPathComponent("Audio", isDirectory: true)
         manifest = root.appendingPathComponent("Workspace.json")
+        let stateName = synchronizationNamespace.map { "Synchronization-" + $0 + ".json" } ?? "Synchronization.json"
+        synchronizationFile = root.appendingPathComponent(stateName)
     }
 
     public func load() throws -> StudioWorkspace {
         guard FileManager.default.fileExists(atPath: manifest.path) else { return StudioWorkspace() }
         return try JSONDecoder().decode(StudioWorkspace.self, from: Data(contentsOf: manifest))
+    }
+
+    public func loadForSynchronization() throws -> StudioWorkspace {
+        guard FileManager.default.fileExists(atPath: manifest.path) else { return .empty }
+        return try load()
+    }
+
+    public func applySynchronizedWorkspace(_ workspace: StudioWorkspace) throws -> Bool {
+        let previous = try loadForSynchronization()
+        guard previous != workspace else { return false }
+        try save(workspace)
+        removeAudio(previous.assetIDs.subtracting(workspace.assetIDs))
+        return true
+    }
+
+    public func hasAudio(_ id: UUID) -> Bool {
+        FileManager.default.fileExists(atPath: audioURL(for: id).path)
+    }
+
+    public func copyAudio(from sourceID: UUID, to destinationID: UUID) throws {
+        try FileManager.default.createDirectory(at: media, withIntermediateDirectories: true)
+        let temporary = media.appendingPathComponent(UUID().uuidString + ".copy")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        try FileManager.default.copyItem(at: audioURL(for: sourceID), to: temporary)
+        try FileManager.default.moveItem(at: temporary, to: audioURL(for: destinationID))
+    }
+
+    public func loadSyncState() throws -> WorkspaceSyncState {
+        let file = synchronizationFile
+        guard FileManager.default.fileExists(atPath: file.path) else { return WorkspaceSyncState() }
+        return try JSONDecoder().decode(WorkspaceSyncState.self, from: Data(contentsOf: file))
+    }
+
+    public func saveSyncState(_ state: WorkspaceSyncState) throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try JSONEncoder().encode(state).write(to: synchronizationFile, options: .atomic)
     }
 
     public func save(_ workspace: StudioWorkspace) throws {

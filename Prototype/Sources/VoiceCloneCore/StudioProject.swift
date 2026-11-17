@@ -100,7 +100,7 @@ public struct StudioProject: Identifiable, Codable, Equatable, Sendable {
     }
 }
 
-public struct StudioWorkspace: Codable, Sendable {
+public struct StudioWorkspace: Codable, Equatable, Sendable {
     public var projects: [StudioProject]
     public var voices: [StudioVoice]
     public var activeProjectID: UUID?

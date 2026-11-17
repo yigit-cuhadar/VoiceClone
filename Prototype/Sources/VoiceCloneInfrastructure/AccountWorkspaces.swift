@@ -21,8 +21,12 @@ public struct AccountWorkspaces {
     }
 
     public func canTransferGuest(to accountID: String) -> Bool {
-        let destination = directory(for: accountID)
-        guard !FileManager.default.fileExists(atPath: destination.path),
+        canTransferGuest(toDirectory: directory(for: accountID))
+    }
+
+    public func canTransferGuest(toDirectory destination: URL) -> Bool {
+        guard destination.standardizedFileURL.path.hasPrefix(accounts.standardizedFileURL.path + "/"),
+              !FileManager.default.fileExists(atPath: destination.path),
               FileManager.default.fileExists(atPath: guest.appendingPathComponent("Workspace.json").path),
               let workspace = try? LocalStudioWorkspace(root: guest).load() else { return false }
         return !workspace.voices.isEmpty || workspace.projects.contains { !$0.sections.isEmpty }
@@ -31,11 +35,15 @@ public struct AccountWorkspaces {
     /// Copies first, atomically commits the destination, then removes guest data.
     /// The journal finishes guest cleanup if the process stops after the commit.
     public func transferGuest(to accountID: String) throws {
-        guard canTransferGuest(to: accountID) else { return }
+        try transferGuest(toDirectory: directory(for: accountID))
+    }
+
+    public func transferGuest(toDirectory destination: URL) throws {
+        guard canTransferGuest(toDirectory: destination) else { return }
         let manager = FileManager.default
-        let destination = directory(for: accountID)
-        try manager.createDirectory(at: accounts, withIntermediateDirectories: true)
-        let staging = accounts.appendingPathComponent(".transfer-\(UUID().uuidString)", isDirectory: true)
+        let parent = destination.deletingLastPathComponent()
+        try manager.createDirectory(at: parent, withIntermediateDirectories: true)
+        let staging = parent.appendingPathComponent(".transfer-\(UUID().uuidString)", isDirectory: true)
         try manager.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? manager.removeItem(at: staging) }
         for name in artifacts {
@@ -46,7 +54,8 @@ public struct AccountWorkspaces {
         }
         // Validate the copied manifest before making it the account workspace.
         _ = try LocalStudioWorkspace(root: staging).load()
-        try JSONEncoder().encode(accountID).write(to: transferJournal, options: .atomic)
+        let relative = String(destination.standardizedFileURL.path.dropFirst(accounts.standardizedFileURL.path.count + 1))
+        try JSONEncoder().encode(Transfer(destination: relative)).write(to: transferJournal, options: .atomic)
         try manager.moveItem(at: staging, to: destination)
         try finishPendingTransfer()
     }
@@ -54,8 +63,17 @@ public struct AccountWorkspaces {
     public func finishPendingTransfer() throws {
         let manager = FileManager.default
         guard manager.fileExists(atPath: transferJournal.path) else { return }
-        let id = try JSONDecoder().decode(String.self, from: Data(contentsOf: transferJournal))
-        let destination = directory(for: id)
+        let data = try Data(contentsOf: transferJournal)
+        let destination: URL
+        if let legacyID = try? JSONDecoder().decode(String.self, from: data) {
+            destination = directory(for: legacyID)
+        } else {
+            let transfer = try JSONDecoder().decode(Transfer.self, from: data)
+            destination = accounts.appendingPathComponent(transfer.destination).standardizedFileURL
+            guard destination.path.hasPrefix(accounts.standardizedFileURL.path + "/") else {
+                throw WorkspaceSyncError.unsupportedFormat
+            }
+        }
         if manager.fileExists(atPath: destination.appendingPathComponent("Workspace.json").path) {
             _ = try LocalStudioWorkspace(root: destination).load()
             for name in artifacts {
@@ -65,6 +83,8 @@ public struct AccountWorkspaces {
         }
         try manager.removeItem(at: transferJournal)
     }
+
+    private struct Transfer: Codable { let destination: String }
 
     public func remove(accountID: String) throws {
         try finishPendingTransfer()

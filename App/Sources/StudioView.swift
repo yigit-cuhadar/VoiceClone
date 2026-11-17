@@ -8,6 +8,9 @@ import AppKit
 struct StudioView: View {
     @Bindable var model: StudioViewModel
     var account: AccountViewModel? = nil
+    var synchronization: CloudSyncViewModel? = nil
+    var cloudNotice: String? = nil
+    var requestCloudConsent: () -> Void = {}
     @State private var audio = StudioAudioControls()
     @State private var sheet: StudioSheet?
     @State private var deletion: Deletion?
@@ -154,11 +157,14 @@ struct StudioView: View {
                     .accessibilityHint("Edit this section")
                 if let current {
                     Text(current.model.name).font(.caption).foregroundStyle(.secondary)
+                    if !model.hasAudio(current.id) {
+                        Text("Waiting for audio sync").font(.caption).foregroundStyle(.secondary)
+                    }
                 } else if section.generation != nil {
                     Text("Needs regeneration").font(.caption).foregroundStyle(.orange)
                 }
             }
-            if let current {
+            if let current, model.hasAudio(current.id) {
                 Button { play(model.audioURL(for: current.id)) } label: {
                     Image(systemName: "play.circle.fill").font(.title2)
                 }
@@ -195,7 +201,7 @@ struct StudioView: View {
         } else {
             Button { model.generate() } label: { Label("Generate remaining", systemImage: "waveform") }
                 .buttonStyle(.borderedProminent)
-                .disabled(project.voiceID == nil || model.hasCompleteAudio || project.sections.allSatisfy { $0.text.isBlank })
+                .disabled(project.voiceID == nil || !model.hasSectionsToGenerate)
         }
         Button { model.exportProject() } label: { Label("Prepare WAV", systemImage: "square.and.arrow.up") }
             .buttonStyle(.bordered)
@@ -228,7 +234,7 @@ struct StudioView: View {
     private func present(_ item: StudioSheet) -> some View {
         switch item {
         case .account:
-            if let account { AccountView(model: account) }
+            if let account { AccountView(model: account, synchronization: synchronization, cloudNotice: cloudNotice, requestCloudConsent: requestCloudConsent) }
         case .projects:
             panel("Projects") {
                 List {
@@ -262,6 +268,7 @@ struct StudioView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Button("Play", systemImage: "play.circle") { play(model.audioURL(for: voice.id)) }
                                 .labelStyle(.iconOnly)
+                                .disabled(!model.hasAudio(voice.id))
                             Menu {
                                 Button("Delete voice", role: .destructive) {
                                     sheet = nil

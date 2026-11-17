@@ -9,6 +9,8 @@ final class AccountViewModel {
     private let removeLocalData: (String) throws -> Void
     private(set) var account: VoiceCloneAccount?
     private(set) var isBusy = false
+    var prepareForDeletion: ((String) async throws -> Void)?
+    var didDeleteAccount: ((String?) -> Void)?
     var email = ""
     var password = ""
     var message: String?
@@ -82,8 +84,9 @@ final class AccountViewModel {
         await perform { service in try service.signOut() }
     }
 
-    func useApple(_ credential: AppleAccountCredential, action: AppleAccountAction) async {
+    func useApple(_ credential: AppleAccountCredential, action: AppleAccountAction, expectedAccountID: String?) async {
         await perform { service in
+            guard service.currentAccount?.id == expectedAccountID else { throw AccountError.signedOut }
             switch action {
             case .signIn:
                 try await service.signInWithApple(identityToken: credential.identityToken, nonce: credential.nonce,
@@ -111,12 +114,15 @@ final class AccountViewModel {
 
     private func delete(using service: any AccountAuthenticating, appleAuthorizationCode: String?) async throws {
         guard let id = account?.id else { throw AccountError.signedOut }
+        try await prepareForDeletion?(id)
+        guard service.currentAccount?.id == id else { throw AccountError.signedOut }
         try await service.deleteAccount(appleAuthorizationCode: appleAuthorizationCode)
         password = ""
         do { try removeLocalData(id) }
         catch {
             self.error = "Your account was deleted, but its local files could not be removed. \(error.localizedDescription)"
         }
+        didDeleteAccount?(error)
     }
 
     private func perform(_ operation: (any AccountAuthenticating) async throws -> Void) async {

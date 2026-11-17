@@ -14,6 +14,7 @@ final class StudioViewModel {
     private var operationID: UUID?
     private var loadError: (any Error)?
 
+    private(set) var workspaceRevision = 0
     private(set) var workspace = StudioWorkspace()
     private(set) var readyModels: Set<StudioModel> = []
     private(set) var status: String?
@@ -75,10 +76,32 @@ final class StudioViewModel {
         return project.sections.contains { !$0.text.isBlank }
     }
 
+    var hasSectionsToGenerate: Bool {
+        guard let project else { return false }
+        return project.sections.contains { !$0.text.isBlank && project.currentGeneration(for: $0) == nil }
+    }
+
     var hasCompleteAudio: Bool {
         guard let project else { return false }
         let sections = project.sections.filter { !$0.text.isBlank }
-        return !sections.isEmpty && sections.allSatisfy { project.currentGeneration(for: $0) != nil }
+        return !sections.isEmpty && sections.allSatisfy { section in
+            guard let generation = project.currentGeneration(for: section) else { return false }
+            return hasAudio(generation.id)
+        }
+    }
+
+    func hasAudio(_ id: UUID) -> Bool {
+        _ = workspaceRevision
+        return FileManager.default.fileExists(atPath: store.audioURL(for: id).path)
+    }
+
+    func reloadWorkspace() {
+        guard !isBusy else { return }
+        do {
+            workspace = try store.load()
+            workspaceRevision += 1
+            clearPreview()
+        } catch { self.error = error.localizedDescription }
     }
 
     func audioURL(for id: UUID) -> URL {
@@ -206,6 +229,10 @@ final class StudioViewModel {
             error = StudioError.missingVoice.localizedDescription
             return
         }
+        guard hasAudio(voice.id) else {
+            error = "Your reference recording is waiting to download from iCloud."
+            return
+        }
         guard readyModels.contains(model) else {
             error = StudioError.unavailableModel.localizedDescription
             return
@@ -229,6 +256,10 @@ final class StudioViewModel {
             return
         }
         let model = selectedModel
+        guard hasAudio(voice.id) else {
+            error = "Your reference recording is waiting to download from iCloud."
+            return
+        }
         guard readyModels.contains(model) else {
             error = StudioError.unavailableModel.localizedDescription
             return
@@ -349,6 +380,7 @@ final class StudioViewModel {
         }
         let unused = workspace.assetIDs.subtracting(next.assetIDs)
         workspace = next
+        workspaceRevision += 1
         store.removeAudio(unused)
     }
 

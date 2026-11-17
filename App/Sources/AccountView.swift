@@ -2,6 +2,9 @@ import SwiftUI
 
 struct AccountView: View {
     @Bindable var model: AccountViewModel
+    var synchronization: CloudSyncViewModel? = nil
+    var cloudNotice: String? = nil
+    var requestCloudConsent: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
     @State private var creatingAccount = false
     @State private var deletingAccount = false
@@ -19,8 +22,31 @@ struct AccountView: View {
                 } else if let account = model.account {
                     Section("Signed in") {
                         if let email = account.email { Text(email).textSelection(.enabled) }
-                        Text("iCloud sync is being added. Projects and audio are currently stored on this device.")
-                            .foregroundStyle(.secondary)
+
+                    }
+                    if let synchronization {
+                        Section("iCloud sync") {
+                            Toggle("Sync library", isOn: Binding(
+                                get: { synchronization.preferences.isEnabled },
+                                set: { enabled in
+                                    if enabled && !synchronization.preferences.hasAskedConsent { requestCloudConsent() }
+                                    else { Task { await synchronization.setEnabled(enabled) } }
+                                }))
+                            Toggle("Allow cellular audio transfers", isOn: Binding(
+                                get: { synchronization.preferences.allowsCellularAudio },
+                                set: { value in Task { await synchronization.setCellularAudio(value) } }))
+                            Text("Reference recordings, scripts, projects, settings, and generated audio use your private iCloud storage. Use the same VoiceClone and iCloud accounts on your devices.")
+                                .font(.footnote).foregroundStyle(.secondary)
+                            Text(synchronization.status).font(.callout)
+                            if let error = synchronization.error { Text(error).foregroundStyle(.red) }
+                            if let date = synchronization.lastSynced {
+                                LabeledContent("Last synced") { Text(date, style: .relative) }
+                            }
+                            Button("Sync now", action: synchronization.requestSync)
+                                .disabled(!synchronization.preferences.isEnabled || synchronization.isSyncing)
+                        }
+                    } else if let cloudNotice {
+                        Section("iCloud sync") { Text(cloudNotice) }
                     }
                     if account.usesPassword && !account.isEmailVerified {
                         Section("Verify your email") {
@@ -54,7 +80,7 @@ struct AccountView: View {
                     }
                     if deletingAccount {
                         Section("Delete your account") {
-                            Text("This permanently deletes your VoiceClone account, projects, voices, and audio saved for this account on this device.")
+                            Text("This permanently deletes your VoiceClone account, its local projects, voices, and audio. Cloud copies are removed when the original iCloud account is available.")
                             if account.usesApple {
                                 Text("Confirm deletion, then continue with Apple to verify your identity.").font(.footnote)
                                 if confirmingDeletion {
@@ -140,6 +166,8 @@ struct AccountView: View {
     }
 
     private func appleButton(_ action: AppleAccountAction) -> some View {
-        AppleAccountButton(action: { await model.useApple($0, action: action) }, reportError: { model.error = $0 })
+        let expectedAccountID = model.account?.id
+        return AppleAccountButton(action: { await model.useApple($0, action: action, expectedAccountID: expectedAccountID) },
+                                  reportError: { model.error = $0 })
     }
 }
