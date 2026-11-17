@@ -14,6 +14,7 @@ struct StudioSmokeTest {
     let report: URL
     let workspace: URL
     let language: SpeechLanguage
+    let requestedModel: StudioModel?
 
     static func configuration() -> Self? {
         let arguments = CommandLine.arguments
@@ -30,7 +31,8 @@ struct StudioSmokeTest {
             fixtures: fixtureDirectory,
             report: reports.appendingPathComponent("report.json"),
             workspace: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true),
-            language: language
+            language: language,
+            requestedModel: arguments.indices.contains(index + 2) ? StudioModel(rawValue: arguments[index + 2]) : nil
         )
     }
 
@@ -41,6 +43,11 @@ struct StudioSmokeTest {
                 fixtures.appendingPathComponent("script-\(language.rawValue).json")))
             let reference = fixtures.appendingPathComponent("reference-\(language.rawValue).aiff")
 
+            if let requestedModel {
+                model.setModel(requestedModel)
+                guard model.selectedModel == requestedModel else { throw SmokeError.incomplete }
+            }
+            result["model"] = model.selectedModel.rawValue
             let needsDownload = !model.readyModels.contains(model.selectedModel)
             if needsDownload {
                 model.downloadModel(model.selectedModel)
@@ -62,12 +69,21 @@ struct StudioSmokeTest {
             let second = try require(initial.sections[1].generation)
             let original = try require(first.generation)
 
+            if let requestedModel {
+                model.previewModel(requestedModel)
+                try await wait(for: model)
+                let preview = try require(model.preview)
+                guard preview.model == requestedModel, try AudioFiles.duration(of: preview.url) > 0,
+                      model.project == initial, model.selectedModel == requestedModel else { throw SmokeError.incomplete }
+                result["preview"] = "verified"
+            }
+
             model.editSection(first.id, text: script.text)
             guard !model.hasCompleteAudio else { throw SmokeError.incomplete }
             model.generate(first.id)
             try await wait(for: model)
             let updated = try require(model.project)
-            guard let replacement = updated.sections[0].generation, replacement.id != original.id,
+            guard let replacement = updated.sections[0].generation, replacement.id != original.id, replacement.model == model.selectedModel,
                   updated.sections[1].generation == second, model.hasCompleteAudio else { throw SmokeError.incomplete }
 
             let reopened = try LocalStudioWorkspace(root: workspace).load()

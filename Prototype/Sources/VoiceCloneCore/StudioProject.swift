@@ -3,14 +3,27 @@ import Foundation
 public enum StudioModel: String, CaseIterable, Codable, Sendable, Identifiable {
     case int8
     case fp16
+    case chatterbox
 
     public var id: Self { self }
-    public var name: String { "OmniVoice \(rawValue.uppercased())" }
-    public var repository: String { "aufklarer/OmniVoice-MLX-\(rawValue)" }
+    public var name: String {
+        switch self {
+        case .int8, .fp16: "OmniVoice \(rawValue.uppercased())"
+        case .chatterbox: "Chatterbox Multilingual"
+        }
+    }
+
+    public var repository: String {
+        switch self {
+        case .int8, .fp16: "aufklarer/OmniVoice-MLX-\(rawValue)"
+        case .chatterbox: "aufklarer/Chatterbox-Multilingual-MLX-fp16"
+        }
+    }
     public var downloadBytes: Int64 {
         switch self {
         case .int8: 1_103_709_212
         case .fp16: 1_639_483_112
+        case .chatterbox: 1_852_159_783
         }
     }
 }

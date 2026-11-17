@@ -43,6 +43,20 @@ public struct RenderStudioSection: Sendable {
         return StudioGeneration(id: id, sourceText: section.text, voiceID: voice.id,
                                 language: project.language, model: model, modelFingerprint: fingerprint)
     }
+
+    public func preview(
+        project: StudioProject,
+        voice: StudioVoice,
+        model: StudioModel,
+        destination: URL
+    ) async throws {
+        guard project.voiceID == voice.id else { throw StudioError.missingVoice }
+        let chunks = project.sections.lazy.map { StudioScript.chunks($0.text, language: project.language) }
+        guard let text = chunks.compactMap(\.first).first else { throw StudioError.missingScript }
+        let request = try SynthesisRequest(text: text, referenceAudio: workspace.audioURL(for: voice.id),
+                                          referenceText: voice.transcript, language: project.language)
+        _ = try await renderer.render(StudioSectionRender(requests: [request], destination: destination, model: model)) { _, _ in }
+    }
 }
 
 public enum StudioScript {

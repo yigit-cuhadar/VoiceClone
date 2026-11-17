@@ -19,6 +19,7 @@ let package = Package(
             dependencies: [
                 "VoiceCloneCore",
                 .product(name: "OmniVoiceTTS", package: "speech-swift"),
+                .product(name: "ChatterboxTTS", package: "speech-swift", condition: .when(platforms: [.macOS])),
                 .product(name: "AudioCommon", package: "speech-swift"),
                 .product(name: "MLX", package: "mlx-swift", condition: .when(platforms: [.iOS]))
             ]

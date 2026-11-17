@@ -17,7 +17,7 @@ struct VoiceCloneApp: App {
         let models = StudioModelCache()
         _model = State(initialValue: StudioViewModel(
             store: LocalStudioWorkspace(root: root),
-            renderer: OmniVoiceStudioRenderer(models: models),
+            renderer: LocalStudioRenderer(models: models),
             models: models
         ))
     }

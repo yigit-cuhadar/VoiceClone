@@ -290,6 +290,17 @@ struct StudioView: View {
                                 }
                             }
                             .buttonStyle(.bordered)
+                            if model.readyModels.contains(entry), model.canPreview {
+                                HStack {
+                                    Button("Preview", systemImage: "waveform") { model.previewModel(entry) }
+                                        .disabled(model.isBusy)
+                                    if let preview = model.preview, preview.model == entry {
+                                        Button("Replay preview", systemImage: "play") { play(preview.url) }
+                                            .labelStyle(.iconOnly)
+                                    }
+                                }
+                                .buttonStyle(.borderless)
+                            }
                         }
                         .padding(.vertical, 5)
                     }
@@ -299,6 +310,9 @@ struct StudioView: View {
                         Button("Cancel", action: model.cancel)
                     }
                     if let error = model.error { Text(error).foregroundStyle(.red) }
+                }
+                .onChange(of: model.preview) { _, preview in
+                    if let preview { play(preview.url) }
                 }
             }
         case .addVoice:

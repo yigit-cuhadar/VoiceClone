@@ -10,7 +10,8 @@ Build from this directory using Xcode and the Metal toolchain. If Xcode asks you
 
 ```sh
 xcodebuild -scheme VoiceCloneProbe -configuration Release \
-  -destination 'platform=macOS,arch=arm64' -derivedDataPath .build/xcode build
+  -destination 'platform=macOS,arch=arm64' -derivedDataPath .build/xcode \
+  ARCHS=arm64 ONLY_ACTIVE_ARCH=YES build
 ```
 
 Choose a short recording of your voice or a voice you have permission to use. Pass the words spoken in the reference recording, followed by the text to synthesize and a new output path.

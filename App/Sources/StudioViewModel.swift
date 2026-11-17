@@ -19,6 +19,7 @@ final class StudioViewModel {
     private(set) var status: String?
     private(set) var progress: Double?
     private(set) var exportURL: URL?
+    private(set) var preview: ModelPreview?
     var error: String?
 
     init(store: any StudioWorkspaceStore, renderer: any StudioSectionRendering, models: StudioModelCache) {
@@ -64,6 +65,11 @@ final class StudioViewModel {
     }
 
     var isBusy: Bool { operationID != nil }
+
+    var canPreview: Bool {
+        guard let project, project.voiceID != nil else { return false }
+        return project.sections.contains { !$0.text.isBlank }
+    }
 
     var hasCompleteAudio: Bool {
         guard let project else { return false }
@@ -188,6 +194,28 @@ final class StudioViewModel {
         }
     }
 
+    func previewModel(_ model: StudioModel) {
+        #if targetEnvironment(simulator)
+        error = "Speech generation requires a physical iPhone."
+        #else
+        guard let project, let voice = workspace.voices.first(where: { $0.id == project.voiceID }) else {
+            error = StudioError.missingVoice.localizedDescription
+            return
+        }
+        guard readyModels.contains(model) else {
+            error = StudioError.unavailableModel.localizedDescription
+            return
+        }
+        let destination = FileManager.default.temporaryDirectory.appendingPathComponent("VoiceClone-\(UUID().uuidString).wav")
+        perform("Previewing \(model.name)…") { _ in
+            defer { self.refreshModels() }
+            try await self.renderSection.preview(project: project, voice: voice, model: model, destination: destination)
+            self.clearPreview()
+            self.preview = ModelPreview(model: model, url: destination)
+        }
+        #endif
+    }
+
     func generate(_ sectionID: UUID? = nil) {
         #if targetEnvironment(simulator)
         error = "Speech generation requires a physical iPhone."
@@ -305,6 +333,7 @@ final class StudioViewModel {
     private func save(_ next: StudioWorkspace) throws {
         if let loadError { throw loadError }
         try store.save(next)
+        clearPreview()
         if let exportURL {
             try? FileManager.default.removeItem(at: exportURL.deletingLastPathComponent())
             self.exportURL = nil
@@ -313,6 +342,16 @@ final class StudioViewModel {
         workspace = next
         store.removeAudio(unused)
     }
+
+    private func clearPreview() {
+        if let preview { try? FileManager.default.removeItem(at: preview.url) }
+        preview = nil
+    }
+}
+
+struct ModelPreview: Equatable {
+    let model: StudioModel
+    let url: URL
 }
 
 extension String {
