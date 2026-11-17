@@ -26,7 +26,7 @@ public final class OmniVoiceSynthesizer: SpeechSynthesizing {
 
     public static func load(_ variant: Variant, offline: Bool) async throws -> OmniVoiceSynthesizer {
         #if os(iOS)
-        _ = configureMemoryCache
+        configureMemory()
         traceMemory("before load")
         #endif
         let model = try await OmniVoiceTTSModel.fromPretrained(
@@ -54,7 +54,9 @@ public final class OmniVoiceSynthesizer: SpeechSynthesizing {
     }
 
     #if os(iOS)
-    private static func traceMemory(_ stage: String) {
+    static func configureMemory() { _ = configureMemoryCache }
+
+    static func traceMemory(_ stage: String) {
         guard ProcessInfo.processInfo.environment["VOICECLONE_TRACE_MEMORY"] == "1" else { return }
         let mebibyte = 1_048_576
         let message = "\(stage)  headroom \(os_proc_available_memory() / mebibyte) MiB  MLX active \(MLX.Memory.activeMemory / mebibyte) MiB  MLX peak \(MLX.Memory.peakMemory / mebibyte) MiB\n"

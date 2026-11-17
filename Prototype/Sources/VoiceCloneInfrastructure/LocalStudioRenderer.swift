@@ -33,7 +33,7 @@ public actor LocalStudioRenderer: StudioSectionRendering {
             let clip = staging.appendingPathComponent("\(index).wav")
             if (try? AudioFiles.duration(of: clip)).map({ $0 > 0 }) != true {
                 if FileManager.default.fileExists(atPath: clip.path) { try FileManager.default.removeItem(at: clip) }
-                if synthesize == nil { synthesize = try await SynthesizeSpeech(synthesizer: load(section.model)) }
+                if synthesize == nil { synthesize = try await SynthesizeSpeech(synthesizer: load(section.model, referenceAudio: request.referenceAudio)) }
                 try Task.checkCancellation()
                 if let synthesize { try AudioFiles.writeWAV(try synthesize(request), to: clip) }
             }
@@ -67,9 +67,14 @@ public actor LocalStudioRenderer: StudioSectionRendering {
         return checkpoint
     }
 
-    private func load(_ model: StudioModel) async throws -> any SpeechSynthesizing {
+    private func load(_ model: StudioModel, referenceAudio: URL) async throws -> any SpeechSynthesizing {
         switch model {
-        case .int8: try await OmniVoiceSynthesizer.load(.int8, offline: true)
+        case .int8:
+            #if os(iOS)
+            try await MobileOmniVoiceSynthesizer.load(bundle: models.directory(for: model), referenceAudio: referenceAudio)
+            #else
+            try await OmniVoiceSynthesizer.load(.int8, offline: true)
+            #endif
         case .fp16: try await OmniVoiceSynthesizer.load(.fp16, offline: true)
         case .chatterbox:
             #if os(macOS)
