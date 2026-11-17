@@ -15,6 +15,7 @@ struct StudioSmokeTest {
     let workspace: URL
     let language: SpeechLanguage
     let requestedModel: StudioModel?
+    let previewOnly: Bool
 
     static func configuration() -> Self? {
         let arguments = CommandLine.arguments
@@ -32,7 +33,8 @@ struct StudioSmokeTest {
             report: reports.appendingPathComponent("report.json"),
             workspace: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true),
             language: language,
-            requestedModel: arguments.indices.contains(index + 2) ? StudioModel(rawValue: arguments[index + 2]) : nil
+            requestedModel: arguments.indices.contains(index + 2) ? StudioModel(rawValue: arguments[index + 2]) : nil,
+            previewOnly: arguments.contains("--preview-only")
         )
     }
 
@@ -60,44 +62,46 @@ struct StudioSmokeTest {
             model.setLanguage(language)
             try model.addVoice(name: "Synthetic reference", transcript: script.transcript, source: reference)
             model.appendScript("\(script.text) \(script.text)\n\n\(script.text)")
-            model.generate()
-            try await wait(for: model)
-
-            let initial = try require(model.project)
-            guard initial.sections.count == 2, model.hasCompleteAudio else { throw SmokeError.incomplete }
-            let first = initial.sections[0]
-            let second = try require(initial.sections[1].generation)
-            let original = try require(first.generation)
-
-            if let requestedModel {
-                model.previewModel(requestedModel)
-                try await wait(for: model)
-                let preview = try require(model.preview)
-                guard preview.model == requestedModel, try AudioFiles.duration(of: preview.url) > 0,
-                      model.project == initial, model.selectedModel == requestedModel else { throw SmokeError.incomplete }
+            if previewOnly {
+                try await verifyPreview(model)
                 result["preview"] = "verified"
+                result["status"] = "passed"
+            } else {
+                model.generate()
+                try await wait(for: model)
+
+                let initial = try require(model.project)
+                guard initial.sections.count == 2, model.hasCompleteAudio else { throw SmokeError.incomplete }
+                let first = initial.sections[0]
+                let second = try require(initial.sections[1].generation)
+                let original = try require(first.generation)
+
+                if requestedModel != nil {
+                    try await verifyPreview(model)
+                    result["preview"] = "verified"
+                }
+
+                model.editSection(first.id, text: script.text)
+                guard !model.hasCompleteAudio else { throw SmokeError.incomplete }
+                model.generate(first.id)
+                try await wait(for: model)
+                let updated = try require(model.project)
+                guard let replacement = updated.sections[0].generation, replacement.id != original.id, replacement.model == model.selectedModel,
+                      updated.sections[1].generation == second, model.hasCompleteAudio else { throw SmokeError.incomplete }
+
+                let reopened = try LocalStudioWorkspace(root: workspace).load()
+                guard reopened.projects.first == updated, reopened.voices.count == 1 else { throw SmokeError.incomplete }
+
+                model.exportProject()
+                try await wait(for: model)
+                let export = try require(model.exportURL)
+                let expected = try AudioFiles.duration(of: model.audioURL(for: replacement.id))
+                    + AudioFiles.duration(of: model.audioURL(for: second.id))
+                let duration = try AudioFiles.duration(of: export)
+                guard duration > 0, abs(expected - duration) < 0.001 else { throw SmokeError.incomplete }
+                result["status"] = "passed"
+                result["exportSeconds"] = String(duration)
             }
-
-            model.editSection(first.id, text: script.text)
-            guard !model.hasCompleteAudio else { throw SmokeError.incomplete }
-            model.generate(first.id)
-            try await wait(for: model)
-            let updated = try require(model.project)
-            guard let replacement = updated.sections[0].generation, replacement.id != original.id, replacement.model == model.selectedModel,
-                  updated.sections[1].generation == second, model.hasCompleteAudio else { throw SmokeError.incomplete }
-
-            let reopened = try LocalStudioWorkspace(root: workspace).load()
-            guard reopened.projects.first == updated, reopened.voices.count == 1 else { throw SmokeError.incomplete }
-
-            model.exportProject()
-            try await wait(for: model)
-            let export = try require(model.exportURL)
-            let expected = try AudioFiles.duration(of: model.audioURL(for: replacement.id))
-                + AudioFiles.duration(of: model.audioURL(for: second.id))
-            let duration = try AudioFiles.duration(of: export)
-            guard duration > 0, abs(expected - duration) < 0.001 else { throw SmokeError.incomplete }
-            result["status"] = "passed"
-            result["exportSeconds"] = String(duration)
         } catch {
             result["status"] = "failed"
             result["error"] = error.localizedDescription
@@ -108,6 +112,16 @@ struct StudioSmokeTest {
         } catch {
             NSLog("Could not write studio smoke test result: %@", error.localizedDescription)
         }
+    }
+
+    private func verifyPreview(_ model: StudioViewModel) async throws {
+        let project = try require(model.project)
+        let selectedModel = model.selectedModel
+        model.previewModel(selectedModel)
+        try await wait(for: model)
+        let preview = try require(model.preview)
+        guard preview.model == selectedModel, try AudioFiles.duration(of: preview.url) > 0,
+              model.project == project, model.selectedModel == selectedModel else { throw SmokeError.incomplete }
     }
 
     private func require<T>(_ value: T?) throws -> T {
