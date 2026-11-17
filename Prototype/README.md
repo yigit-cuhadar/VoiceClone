@@ -30,3 +30,14 @@ Open [VoiceCloneProbe.xcodeproj](iOS/VoiceCloneProbe.xcodeproj) in Xcode, select
 Choose INT8 or FP16, select the output language, and import a reference clip between 1 and 15 seconds long. Enter the clip's transcript and the text to generate, then select **Generate WAV**. The test app reports load time, generation time, audio duration, process lifetime peak memory, and thermal state. Relaunch the app between runs to measure peak memory separately for each variant. Enable **Use cached model only** after the first download for measurements without network transfer.
 
 Debug builds also accept `--benchmark <int8|fp16> <en|tr>` as launch arguments. Pass `VOICECLONE_BENCHMARK_CONDITION=VOICECLONE_BENCHMARK` to `xcodebuild` when building in Release to enable the same entry point. Place `reference-<language>.aiff` and `script-<language>.json` in `Documents/Benchmark` inside the app container. The JSON contains `transcript` and `text` strings. The app writes the WAV and a JSON report to that directory. This entry point uses cached weights unless the launch arguments include `--allow-model-download`.
+
+### iPhone 17 results
+
+Release build on an iPhone 17 running iOS 26.6.2. Each row represents one successful run in a fresh app process using locally staged weights, a synthetic reference, and a short target sentence. Memory is the process lifetime peak physical footprint reported by iOS.
+
+| Model | Language | Model load | Generation | Audio | Peak footprint |
+| --- | --- | ---: | ---: | ---: | ---: |
+| INT8 | English | 0.78 s | 2.31 s | 3.84 s | 2,130 MiB |
+| INT8 | Turkish | 1.02 s | 3.42 s | 4.65 s | 2,174 MiB |
+
+Both INT8 files were valid mono, 24 kHz, 16-bit PCM WAV files. The device reported a nominal thermal state at the start and end of both runs. Before applying the 64 MiB MLX allocation-cache limit on iOS, an INT8 run hit the device's per-process memory limit at approximately 3.5 GiB. With the limit applied, FP16 produced no WAV in either language. A foreground retry of the English FP16 case terminated with signal 9. INT8 is the current candidate for this device. Sustained-load measurements, speaker-similarity evaluation, and tests on other iPhone models are pending.

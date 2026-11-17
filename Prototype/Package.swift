@@ -9,13 +9,18 @@ let package = Package(
         .library(name: "VoiceCloneInfrastructure", targets: ["VoiceCloneInfrastructure"])
     ],
     dependencies: [
-        .package(url: "https://github.com/soniqo/speech-swift.git", exact: "0.0.29")
+        .package(url: "https://github.com/soniqo/speech-swift.git", exact: "0.0.29"),
+        .package(url: "https://github.com/ml-explore/mlx-swift", exact: "0.31.6")
     ],
     targets: [
         .target(name: "VoiceCloneCore"),
         .target(
             name: "VoiceCloneInfrastructure",
-            dependencies: ["VoiceCloneCore", .product(name: "OmniVoiceTTS", package: "speech-swift")]
+            dependencies: [
+                "VoiceCloneCore",
+                .product(name: "OmniVoiceTTS", package: "speech-swift"),
+                .product(name: "MLX", package: "mlx-swift", condition: .when(platforms: [.iOS]))
+            ]
         ),
         .executableTarget(
             name: "VoiceCloneProbe",
