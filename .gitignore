@@ -3,3 +3,6 @@
 .swiftpm/xcode/xcuserdata/
 xcuserdata/
 DerivedData/
+
+App/Sources/GoogleService-Info.plist
+firebase-debug.log

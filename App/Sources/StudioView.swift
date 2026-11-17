@@ -7,6 +7,7 @@ import AppKit
 
 struct StudioView: View {
     @Bindable var model: StudioViewModel
+    var account: AccountViewModel? = nil
     @State private var audio = StudioAudioControls()
     @State private var sheet: StudioSheet?
     @State private var deletion: Deletion?
@@ -38,6 +39,10 @@ struct StudioView: View {
             }
         }
         .sheet(item: $sheet, content: present)
+        .onDisappear {
+            audio.stop()
+            audio.stopRecording()
+        }
         .alert("VoiceClone", isPresented: Binding(
             get: { model.error != nil },
             set: { if !$0 { model.error = nil } }
@@ -59,6 +64,11 @@ struct StudioView: View {
             Button { sheet = .projects } label: { Label("Projects", systemImage: "folder") }
             Button { sheet = .voices } label: { Label("Voices", systemImage: "waveform") }
             Button { sheet = .models } label: { Label("Models", systemImage: "cpu") }
+            if account != nil {
+                Button { sheet = .account } label: {
+                    Image(systemName: "person.crop.circle").accessibilityLabel("Account")
+                }
+            }
         }
         .buttonStyle(.bordered)
         .controlSize(.regular)
@@ -217,6 +227,8 @@ struct StudioView: View {
     @ViewBuilder
     private func present(_ item: StudioSheet) -> some View {
         switch item {
+        case .account:
+            if let account { AccountView(model: account) }
         case .projects:
             panel("Projects") {
                 List {
@@ -383,12 +395,13 @@ private struct Deletion {
 }
 
 private enum StudioSheet: Identifiable {
-    case projects, voices, models, addVoice, paste
+    case projects, voices, models, addVoice, paste, account
     case projectName(String)
     case section(UUID?, String)
 
     var id: String {
         switch self {
+        case .account: "account"
         case .projects: "projects"
         case .voices: "voices"
         case .models: "models"

@@ -290,6 +290,11 @@ final class StudioViewModel {
 
     func cancel() { operation?.cancel() }
 
+    func cancelAndWait() async {
+        operation?.cancel()
+        await operation?.value
+    }
+
     func refreshModels() {
         readyModels = Set(supportedModels.filter(models.isReady))
     }

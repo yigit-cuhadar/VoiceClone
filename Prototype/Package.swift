@@ -10,7 +10,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/soniqo/speech-swift.git", exact: "0.0.29"),
-        .package(url: "https://github.com/ml-explore/mlx-swift", exact: "0.31.6")
+        .package(url: "https://github.com/ml-explore/mlx-swift", exact: "0.31.6"),
+        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", exact: "13.2.0")
     ],
     targets: [
         .target(name: "VoiceCloneCore"),
@@ -18,6 +19,7 @@ let package = Package(
             name: "VoiceCloneInfrastructure",
             dependencies: [
                 "VoiceCloneCore",
+                .product(name: "FirebaseAuth", package: "firebase-ios-sdk"),
                 .product(name: "OmniVoiceTTS", package: "speech-swift"),
                 .product(name: "ChatterboxTTS", package: "speech-swift", condition: .when(platforms: [.macOS])),
                 .product(name: "AudioCommon", package: "speech-swift"),

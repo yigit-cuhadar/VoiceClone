@@ -1,27 +1,43 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
+	classes = {
+	};
 	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		AC1000000000000000000001 /* VoiceCloneCore in Frameworks */ = {isa = PBXBuildFile; productRef = AC1000000000000000000011 /* VoiceCloneCore */; };
 		AC1000000000000000000002 /* VoiceCloneInfrastructure in Frameworks */ = {isa = PBXBuildFile; productRef = AC1000000000000000000012 /* VoiceCloneInfrastructure */; };
-
+		AC1000000000000000000030 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AC1000000000000000000031; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-
 		AC1000000000000000000005 /* VoiceClone.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceClone.app; sourceTree = BUILT_PRODUCTS_DIR; };
-
+		AC1000000000000000000031 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Sources/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AC1000000000000000000033 = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = ("GoogleService-Info.plist"); target = AC100000000000000000000B; };
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AC100000000000000000000A /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (AC1000000000000000000033);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		AC1000000000000000000006 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = (AC1000000000000000000001, AC1000000000000000000002);
+			files = (
+				AC1000000000000000000001 /* VoiceCloneCore in Frameworks */,
+				AC1000000000000000000002 /* VoiceCloneInfrastructure in Frameworks */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -29,18 +45,19 @@
 /* Begin PBXGroup section */
 		AC1000000000000000000007 = {
 			isa = PBXGroup;
-			children = (AC100000000000000000000A, AC1000000000000000000008);
+			children = (
+				AC1000000000000000000031,
+				AC100000000000000000000A /* Sources */,
+				AC1000000000000000000008 /* Products */,
+			);
 			sourceTree = "<group>";
 		};
 		AC1000000000000000000008 /* Products */ = {
 			isa = PBXGroup;
-			children = (AC1000000000000000000005);
+			children = (
+				AC1000000000000000000005 /* VoiceClone.app */,
+			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		AC100000000000000000000A /* VoiceClone */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Sources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -48,15 +65,26 @@
 /* Begin PBXNativeTarget section */
 		AC100000000000000000000B /* VoiceClone */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AC100000000000000000000C;
-			buildPhases = (AC100000000000000000000D, AC1000000000000000000006);
-			buildRules = ();
-			dependencies = ();
-			fileSystemSynchronizedGroups = (AC100000000000000000000A);
+			buildConfigurationList = AC100000000000000000000C /* Build configuration list for PBXNativeTarget "VoiceClone" */;
+			buildPhases = (
+				AC100000000000000000000D /* Sources */,
+				AC1000000000000000000006 /* Frameworks */,
+				AC1000000000000000000032 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AC100000000000000000000A /* Sources */,
+			);
 			name = VoiceClone;
-			packageProductDependencies = (AC1000000000000000000011, AC1000000000000000000012);
+			packageProductDependencies = (
+				AC1000000000000000000011 /* VoiceCloneCore */,
+				AC1000000000000000000012 /* VoiceCloneInfrastructure */,
+			);
 			productName = VoiceClone;
-			productReference = AC1000000000000000000005;
+			productReference = AC1000000000000000000005 /* VoiceClone.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -68,25 +96,37 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2710;
 			};
-			buildConfigurationList = AC100000000000000000000F;
-			preferredProjectObjectVersion = 77;
+			buildConfigurationList = AC100000000000000000000F /* Build configuration list for PBXProject "VoiceClone" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = (en, Base);
+			knownRegions = (
+				en,
+				Base,
+			);
 			mainGroup = AC1000000000000000000007;
-			packageReferences = (AC1000000000000000000010);
-			productRefGroup = AC1000000000000000000008;
+			packageReferences = (
+				AC1000000000000000000010 /* XCLocalSwiftPackageReference "../Prototype" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AC1000000000000000000008 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (AC100000000000000000000B);
+			targets = (
+				AC100000000000000000000B /* VoiceClone */,
+			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AC1000000000000000000032 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (AC1000000000000000000030); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AC100000000000000000000D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
@@ -95,12 +135,12 @@
 		AC1000000000000000000013 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				SDKROOT = auto;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=macosx*]" = arm64;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
 			};
@@ -109,12 +149,12 @@
 		AC1000000000000000000014 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				SDKROOT = auto;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				"ARCHS[sdk=macosx*]" = arm64;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 5.0;
 			};
@@ -123,17 +163,19 @@
 		AC1000000000000000000015 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "VoiceClone-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "VoiceClone-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A8J42TV74R;
+				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = VoiceClone;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoiceClone records a short sample to create your voice profile.";
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = VoiceClone-macOS.entitlements;
-				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bortera.voiceclone;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yigitcuhadar.voiceclone;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -142,17 +184,19 @@
 		AC1000000000000000000016 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = "VoiceClone-iOS.entitlements";
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "VoiceClone-macOS.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A8J42TV74R;
+				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = VoiceClone;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoiceClone records a short sample to create your voice profile.";
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = VoiceClone-macOS.entitlements;
-				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.bortera.voiceclone;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yigitcuhadar.voiceclone;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(VOICECLONE_SMOKE_CONDITION)";
 				TARGETED_DEVICE_FAMILY = 1;
@@ -162,17 +206,44 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AC100000000000000000000C /* Target configurations */ = {isa = XCConfigurationList; buildConfigurations = (AC1000000000000000000015, AC1000000000000000000016); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		AC100000000000000000000F /* Project configurations */ = {isa = XCConfigurationList; buildConfigurations = (AC1000000000000000000013, AC1000000000000000000014); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		AC100000000000000000000C /* Build configuration list for PBXNativeTarget "VoiceClone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC1000000000000000000015 /* Debug */,
+				AC1000000000000000000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC100000000000000000000F /* Build configuration list for PBXProject "VoiceClone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC1000000000000000000013 /* Debug */,
+				AC1000000000000000000014 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		AC1000000000000000000010 /* Local prototype package */ = {isa = XCLocalSwiftPackageReference; relativePath = ../Prototype; };
+		AC1000000000000000000010 /* XCLocalSwiftPackageReference "../Prototype" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../Prototype;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		AC1000000000000000000011 /* VoiceCloneCore */ = {isa = XCSwiftPackageProductDependency; package = AC1000000000000000000010; productName = VoiceCloneCore; };
-		AC1000000000000000000012 /* VoiceCloneInfrastructure */ = {isa = XCSwiftPackageProductDependency; package = AC1000000000000000000010; productName = VoiceCloneInfrastructure; };
+		AC1000000000000000000011 /* VoiceCloneCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC1000000000000000000010 /* XCLocalSwiftPackageReference "../Prototype" */;
+			productName = VoiceCloneCore;
+		};
+		AC1000000000000000000012 /* VoiceCloneInfrastructure */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC1000000000000000000010 /* XCLocalSwiftPackageReference "../Prototype" */;
+			productName = VoiceCloneInfrastructure;
+		};
 /* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AC100000000000000000000E /* Project object */;
