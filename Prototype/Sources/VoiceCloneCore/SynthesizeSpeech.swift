@@ -1,6 +1,6 @@
 import Foundation
 
-public enum SpeechLanguage: String, Sendable {
+public enum SpeechLanguage: String, CaseIterable, Codable, Sendable {
     case english = "en"
     case turkish = "tr"
 }

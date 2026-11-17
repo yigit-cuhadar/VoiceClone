@@ -22,18 +22,45 @@ public enum AudioFiles {
                 channel.update(from: baseAddress, count: source.count)
             }
         }
-        let settings: [String: Any] = [
-            AVFormatIDKey: kAudioFormatLinearPCM,
-            AVSampleRateKey: audio.sampleRate,
-            AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 16
-        ]
         let stagedURL = url.deletingLastPathComponent().appendingPathComponent("\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: stagedURL) }
         do {
-            let file = try AVAudioFile(forWriting: stagedURL, settings: settings)
+            let file = try AVAudioFile(forWriting: stagedURL, settings: wavSettings(sampleRate: audio.sampleRate))
             try file.write(from: buffer)
         }
         try FileManager.default.moveItem(at: stagedURL, to: url)
+    }
+
+    public static func concatenateWAV(_ inputs: [URL], to url: URL) throws {
+        guard let first = inputs.first else { throw SynthesisError.invalidOutput }
+        let format = try AVAudioFile(forReading: first).processingFormat
+        let stagedURL = url.deletingLastPathComponent().appendingPathComponent("\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: stagedURL) }
+        do {
+            let output = try AVAudioFile(forWriting: stagedURL, settings: wavSettings(sampleRate: format.sampleRate))
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 8_192) else {
+                throw SynthesisError.invalidOutput
+            }
+            for input in inputs {
+                let file = try AVAudioFile(forReading: input)
+                guard file.processingFormat == format else { throw SynthesisError.invalidOutput }
+                while file.framePosition < file.length {
+                    try Task.checkCancellation()
+                    try file.read(into: buffer)
+                    guard buffer.frameLength > 0 else { throw SynthesisError.invalidOutput }
+                    try output.write(from: buffer)
+                }
+            }
+        }
+        try FileManager.default.moveItem(at: stagedURL, to: url)
+    }
+
+    private static func wavSettings(sampleRate: Double) -> [String: Any] {
+        [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: sampleRate,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16
+        ]
     }
 }
