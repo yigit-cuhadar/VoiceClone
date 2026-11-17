@@ -4,6 +4,8 @@ VoiceClone is an on-device voice cloning project for iPhone and Apple Silicon Ma
 
 The local app opens in the Project Editor. Record or import a short reference, add script sections, generate each section, and export the complete audio as a WAV. Projects and voice profiles are stored on the device.
 
+If a generation is interrupted, choose **Generate remaining** or retry the section. VoiceClone reuses completed audio chunks when the script, voice, language, and model still match.
+
 Open [VoiceClone.xcodeproj](App/VoiceClone.xcodeproj) in Xcode and select the `VoiceClone` scheme. Select a development team to run on a physical iPhone. If Xcode asks you to approve the MLX build plugin, review and enable it in Xcode.
 
 Build the macOS app for Apple Silicon with the following command. The architecture override also applies to Swift package targets.

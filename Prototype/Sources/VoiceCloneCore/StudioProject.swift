@@ -122,6 +122,7 @@ public protocol StudioWorkspaceStore: Sendable {
     func load() throws -> StudioWorkspace
     func save(_ workspace: StudioWorkspace) throws
     func audioURL(for id: UUID) -> URL
+    func renderCheckpointURL(for sectionID: UUID) -> URL
     func saveReference(_ url: URL, id: UUID) throws
     func removeAudio(_ ids: Set<UUID>)
 }

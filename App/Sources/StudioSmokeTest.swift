@@ -2,6 +2,9 @@
 import Foundation
 import VoiceCloneCore
 import VoiceCloneInfrastructure
+#if os(iOS)
+import UIKit
+#endif
 
 @MainActor
 struct StudioSmokeTest {
@@ -16,6 +19,7 @@ struct StudioSmokeTest {
     let language: SpeechLanguage
     let requestedModel: StudioModel?
     let previewOnly: Bool
+    let checkpointOnly: Bool
 
     static func configuration() -> Self? {
         let arguments = CommandLine.arguments
@@ -34,11 +38,17 @@ struct StudioSmokeTest {
             workspace: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true),
             language: language,
             requestedModel: arguments.indices.contains(index + 2) ? StudioModel(rawValue: arguments[index + 2]) : nil,
-            previewOnly: arguments.contains("--preview-only")
+            previewOnly: arguments.contains("--preview-only"),
+            checkpointOnly: arguments.contains("--checkpoint-only")
         )
     }
 
     func run(_ model: StudioViewModel) async {
+        #if os(iOS)
+        let idleTimerWasDisabled = UIApplication.shared.isIdleTimerDisabled
+        UIApplication.shared.isIdleTimerDisabled = true
+        defer { UIApplication.shared.isIdleTimerDisabled = idleTimerWasDisabled }
+        #endif
         var result: [String: String] = ["language": language.rawValue]
         do {
             let script = try JSONDecoder().decode(Script.self, from: Data(contentsOf:
@@ -62,7 +72,11 @@ struct StudioSmokeTest {
             model.setLanguage(language)
             try model.addVoice(name: "Synthetic reference", transcript: script.transcript, source: reference)
             model.appendScript("\(script.text) \(script.text)\n\n\(script.text)")
-            if previewOnly {
+            if checkpointOnly {
+                try await verifyRenderCheckpoint(model)
+                result["checkpoint"] = "resumed"
+                result["status"] = "passed"
+            } else if previewOnly {
                 try await verifyPreview(model)
                 result["preview"] = "verified"
                 result["status"] = "passed"
@@ -122,6 +136,48 @@ struct StudioSmokeTest {
         let preview = try require(model.preview)
         guard preview.model == selectedModel, try AudioFiles.duration(of: preview.url) > 0,
               model.project == project, model.selectedModel == selectedModel else { throw SmokeError.incomplete }
+    }
+
+    private func verifyRenderCheckpoint(_ model: StudioViewModel) async throws {
+        let store = LocalStudioWorkspace(root: workspace)
+        let project = try require(model.project)
+        let section = try require(project.sections.first)
+        let voice = try require(model.workspace.voices.first { $0.id == project.voiceID })
+        let selectedModel = model.selectedModel
+        #if os(iOS)
+        let chunkLength = 55
+        #else
+        let chunkLength = 100
+        #endif
+        let initialRenderer = LocalStudioRenderer(models: StudioModelCache())
+        let initial = RenderStudioSection(workspace: store, renderer: initialRenderer, maximumChunkLength: chunkLength)
+        let interrupted = Task {
+            try await initial(section, project: project, voice: voice, model: selectedModel) { completed, _ in
+                if completed == 1 { withUnsafeCurrentTask { $0?.cancel() } }
+            }
+        }
+        do {
+            _ = try await interrupted.value
+            throw SmokeError.incomplete
+        } catch is CancellationError {}
+
+        let checkpoint = store.renderCheckpointURL(for: section.id)
+        let firstClip = checkpoint.appendingPathComponent("0.wav")
+        guard try AudioFiles.duration(of: firstClip) > 0 else { throw SmokeError.incomplete }
+        let before = try firstClip.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        let resumed = RenderStudioSection(workspace: store, renderer: LocalStudioRenderer(models: StudioModelCache()),
+                                          maximumChunkLength: chunkLength)
+        let result = try await resumed(section, project: project, voice: voice, model: selectedModel) { _, _ in }
+        let after = try firstClip.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+        guard before != nil, before == after, try AudioFiles.duration(of: store.audioURL(for: result.id)) > 0 else {
+            throw SmokeError.incomplete
+        }
+
+        var committed = try store.load()
+        guard let index = committed.projects.firstIndex(where: { $0.id == project.id }) else { throw SmokeError.incomplete }
+        committed.projects[index].sections[0].generation = result
+        try store.save(committed)
+        guard !FileManager.default.fileExists(atPath: checkpoint.path) else { throw SmokeError.incomplete }
     }
 
     private func require<T>(_ value: T?) throws -> T {

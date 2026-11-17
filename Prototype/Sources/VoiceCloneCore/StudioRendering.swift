@@ -5,6 +5,7 @@ public struct StudioSectionRender: Sendable {
     public let requests: [SynthesisRequest]
     public let destination: URL
     public let model: StudioModel
+    public let checkpoint: URL?
 }
 
 public protocol StudioSectionRendering: Sendable {
@@ -15,10 +16,12 @@ public protocol StudioSectionRendering: Sendable {
 public struct RenderStudioSection: Sendable {
     private let workspace: any StudioWorkspaceStore
     private let renderer: any StudioSectionRendering
+    private let maximumChunkLength: Int
 
-    public init(workspace: any StudioWorkspaceStore, renderer: any StudioSectionRendering) {
+    public init(workspace: any StudioWorkspaceStore, renderer: any StudioSectionRendering, maximumChunkLength: Int = 100) {
         self.workspace = workspace
         self.renderer = renderer
+        self.maximumChunkLength = max(1, maximumChunkLength)
     }
 
     public func callAsFunction(
@@ -29,7 +32,7 @@ public struct RenderStudioSection: Sendable {
         progress: @Sendable (Int, Int) -> Void
     ) async throws -> StudioGeneration {
         guard project.voiceID == voice.id else { throw StudioError.missingVoice }
-        let chunks = StudioScript.chunks(section.text, language: project.language)
+        let chunks = StudioScript.chunks(section.text, language: project.language, maximumLength: maximumChunkLength)
         guard !chunks.isEmpty else { throw StudioError.missingScript }
         let requests = try chunks.map {
             try SynthesisRequest(text: $0, referenceAudio: workspace.audioURL(for: voice.id),
@@ -37,7 +40,8 @@ public struct RenderStudioSection: Sendable {
         }
         let id = UUID()
         let fingerprint = try await renderer.render(
-            StudioSectionRender(requests: requests, destination: workspace.audioURL(for: id), model: model),
+            StudioSectionRender(requests: requests, destination: workspace.audioURL(for: id), model: model,
+                                checkpoint: workspace.renderCheckpointURL(for: section.id)),
             progress: progress
         )
         return StudioGeneration(id: id, sourceText: section.text, voiceID: voice.id,
@@ -51,11 +55,14 @@ public struct RenderStudioSection: Sendable {
         destination: URL
     ) async throws {
         guard project.voiceID == voice.id else { throw StudioError.missingVoice }
-        let chunks = project.sections.lazy.map { StudioScript.chunks($0.text, language: project.language) }
+        let chunks = project.sections.lazy.map {
+            StudioScript.chunks($0.text, language: project.language, maximumLength: maximumChunkLength)
+        }
         guard let text = chunks.compactMap(\.first).first else { throw StudioError.missingScript }
         let request = try SynthesisRequest(text: text, referenceAudio: workspace.audioURL(for: voice.id),
                                           referenceText: voice.transcript, language: project.language)
-        _ = try await renderer.render(StudioSectionRender(requests: [request], destination: destination, model: model)) { _, _ in }
+        _ = try await renderer.render(StudioSectionRender(requests: [request], destination: destination,
+                                                         model: model, checkpoint: nil)) { _, _ in }
     }
 }
 
@@ -68,10 +75,10 @@ public enum StudioScript {
             .map(StudioSection.init(text:))
     }
 
-    public static func chunks(_ text: String, language: SpeechLanguage) -> [String] {
+    public static func chunks(_ text: String, language: SpeechLanguage, maximumLength: Int = 100) -> [String] {
         // The phone benchmark validated short utterances. Keep inference inputs
         // bounded while preserving the user's larger editable sections.
-        let maxLength = 100
+        let maxLength = max(1, maximumLength)
         let tokenizer = NLTokenizer(unit: .sentence)
         tokenizer.string = text
         tokenizer.setLanguage(language == .turkish ? .turkish : .english)

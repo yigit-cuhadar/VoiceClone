@@ -1,7 +1,9 @@
+import Foundation
 import OmniVoiceTTS
 import VoiceCloneCore
 #if os(iOS)
 import MLX
+import os
 #endif
 
 public final class OmniVoiceSynthesizer: SpeechSynthesizing {
@@ -14,7 +16,7 @@ public final class OmniVoiceSynthesizer: SpeechSynthesizing {
     #if os(iOS)
     private static let configureMemoryCache: Void = {
         // iOS enforces a per-process memory limit below the device's physical RAM.
-        MLX.Memory.cacheLimit = min(MLX.Memory.cacheLimit, 64 * 1_048_576)
+        MLX.Memory.cacheLimit = min(MLX.Memory.cacheLimit, 16 * 1_048_576)
     }()
     #endif
 
@@ -25,15 +27,23 @@ public final class OmniVoiceSynthesizer: SpeechSynthesizing {
     public static func load(_ variant: Variant, offline: Bool) async throws -> OmniVoiceSynthesizer {
         #if os(iOS)
         _ = configureMemoryCache
+        traceMemory("before load")
         #endif
         let model = try await OmniVoiceTTSModel.fromPretrained(
             modelId: "aufklarer/OmniVoice-MLX-\(variant.rawValue)",
             offlineMode: offline
         )
+        #if os(iOS)
+        traceMemory("after load")
+        #endif
         return OmniVoiceSynthesizer(model: model)
     }
 
     public func synthesize(_ request: SynthesisRequest) throws -> SpeechAudio {
+        #if os(iOS)
+        Self.traceMemory("before chunk")
+        defer { Self.traceMemory("after chunk") }
+        #endif
         let samples = try model.generate(
             text: request.text,
             referenceAudio: request.referenceAudio,
@@ -42,4 +52,13 @@ public final class OmniVoiceSynthesizer: SpeechSynthesizing {
         )
         return try SpeechAudio(samples: samples, sampleRate: Double(model.sampleRate))
     }
+
+    #if os(iOS)
+    private static func traceMemory(_ stage: String) {
+        guard ProcessInfo.processInfo.environment["VOICECLONE_TRACE_MEMORY"] == "1" else { return }
+        let mebibyte = 1_048_576
+        let message = "\(stage)  headroom \(os_proc_available_memory() / mebibyte) MiB  MLX active \(MLX.Memory.activeMemory / mebibyte) MiB  MLX peak \(MLX.Memory.peakMemory / mebibyte) MiB\n"
+        FileHandle.standardError.write(Data(message.utf8))
+    }
+    #endif
 }

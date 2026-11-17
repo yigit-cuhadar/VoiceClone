@@ -19,12 +19,27 @@ public struct LocalStudioWorkspace: StudioWorkspaceStore {
     }
 
     public func save(_ workspace: StudioWorkspace) throws {
+        let previous = try load()
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         try JSONEncoder().encode(workspace).write(to: manifest, options: .atomic)
+        let projects = Dictionary(workspace.projects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for project in previous.projects {
+            let updated = projects[project.id]
+            let sections = Dictionary((updated?.sections ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for section in project.sections where sections[section.id] != section
+                || project.voiceID != updated?.voiceID || project.language != updated?.language {
+                try? FileManager.default.removeItem(at: renderCheckpointURL(for: section.id))
+            }
+        }
     }
 
     public func audioURL(for id: UUID) -> URL {
         media.appendingPathComponent(id.uuidString).appendingPathExtension("wav")
+    }
+
+    public func renderCheckpointURL(for sectionID: UUID) -> URL {
+        root.appendingPathComponent("RenderCheckpoints", isDirectory: true)
+            .appendingPathComponent(sectionID.uuidString, isDirectory: true)
     }
 
     public func saveReference(_ url: URL, id: UUID) throws {

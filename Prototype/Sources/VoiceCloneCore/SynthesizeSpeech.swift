@@ -59,11 +59,13 @@ public struct SynthesizeSpeech {
 public enum SynthesisError: LocalizedError {
     case missingText
     case invalidOutput
+    case renderInProgress
 
     public var errorDescription: String? {
         switch self {
         case .missingText: "Both the reference transcript and the text to synthesize are required."
         case .invalidOutput: "The synthesizer did not produce valid speech audio."
+        case .renderInProgress: "This section is already generating."
         }
     }
 }

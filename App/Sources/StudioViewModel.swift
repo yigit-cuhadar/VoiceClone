@@ -26,7 +26,11 @@ final class StudioViewModel {
         self.store = store
         self.renderer = renderer
         self.models = models
+        #if os(iOS)
+        renderSection = RenderStudioSection(workspace: store, renderer: renderer, maximumChunkLength: 55)
+        #else
         renderSection = RenderStudioSection(workspace: store, renderer: renderer)
+        #endif
         do { workspace = try store.load() }
         catch {
             loadError = error
